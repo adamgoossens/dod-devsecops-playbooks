@@ -42,16 +42,7 @@
       scm_dir: "{{ tempdir.path }}"
       scm_branch: "main"
 
-  - shell: "echo '\n' >> {{ lookup('env', 'SSH_PRIVATE_KEY_FILE') }}"
-
-  - pause:
-      seconds: 3600
-
-  - slurp:
-      src: "{{ lookup('env', 'SSH_PRIVATE_KEY_FILE') }}"
-    register: ssh_key
-
-  - debug: var=ssh_key
+  - shell: "echo '' >> {{ lookup('env', 'SSH_PRIVATE_KEY_FILE') }}"
 
   - name: scm - checkout state repository
     ansible.builtin.git:
