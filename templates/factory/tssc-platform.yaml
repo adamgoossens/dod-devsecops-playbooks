@@ -1,0 +1,10 @@
+apiVersion: redhatgov.io/v1alpha1
+kind: TsscPlatform
+metadata:
+  name: software-factory
+  namespace: "{{ namespace }}"
+spec:
+  tsscPlatform:
+    providers:
+      ciTool: jenkins
+      containerRegistry: nexus

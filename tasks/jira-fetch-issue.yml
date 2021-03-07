@@ -1,0 +1,21 @@
+---
+- name: check - fail if required inputs aren't provided
+  fail:
+    msg: "Required input variable {{ item }} is not provided."
+  when:
+    - not item
+  loop:
+    - jsm_issue_id
+
+- name: jsd - fetch ticket details from jsm api
+  community.general.jira:
+    operation: fetch
+    issue: "{{ jsm_issue_id }}"
+  register: jira_issue
+
+- name: jsd - process custom fields
+  set_fact: "{{ key }}={{ val }}"
+  vars:
+    key: "jira_field_{{ item.key }}"
+    val: "{{ jira_issue['meta']['fields'][item.value] }}"
+  loop: "{{ jira_var_lookups | dict2items }}"

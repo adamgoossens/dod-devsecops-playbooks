@@ -1,0 +1,14 @@
+---
+- name: scm - generate tempdir for checkout
+  tempfile:
+    state: directory
+  register: tempdir
+
+- set_fact:
+    scm_dir: "{{ tempdir.path }}"
+
+- name: scm - checkout state repository
+  ansible.builtin.git:
+    repo: "{{ repo }}"
+    dest: "{{ scm_dir }}"
+    version: "{{ branch }}"

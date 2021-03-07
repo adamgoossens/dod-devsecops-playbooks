@@ -1,0 +1,98 @@
+#####################################################################
+#
+# Expected input:
+#   - jsm_issue_id: a key to the Jira Service Management issue
+#
+# Description: Fetches required information from the JSM issue,
+# then deploys a new Ploigos Software Factory within a new project.
+#
+# Once the Software Factory is deployed, post an update on the 
+# JSM ticket with details of how to access it. Then close the ticket.
+#
+#####################################################################
+- hosts: localhost
+  gather_facts: false
+  module_defaults:
+    community.general.jira:
+      uri: "{{ jsm_api }}"
+      username: "{{ lookup('env', 'ATLASSIAN_API_USERNAME') }}"
+      password: "{{ lookup('env', 'ATLASSIAN_API_TOKEN') }}"
+  vars:
+    jira_var_lookups:
+      project_name: 'customfield_10054'
+  tasks:
+  - include_tasks: tasks/jira-fetch-issue.yml
+
+  - name: scm - generate tempdir for checkout
+    tempfile:
+      state: directory
+    register: tempdir
+
+  - set_fact:
+      scm_dir: "{{ tempdir.path }}"
+      scm_branch: "main"
+
+  - name: scm - checkout state repository
+    ansible.builtin.git:
+      repo: "{{ scm_state_repo }}"
+      dest: "{{ scm_dir }}"
+      version: "{{ scm_branch }}"
+
+  - name: sf - create software factory name
+    set_fact:
+      software_factory:
+        name: "sf-{{ jira_field_project_name | lower | regex_replace('[^a-zA-Z0-9 ]','') | regex_replace(' ','-') }}"
+  
+  - set_fact:
+      applications_dir: "{{ scm_dir }}/argocd-applications"
+      factory_dir: "{{ scm_dir }}/software-factories/{{software_factory.name}}"
+
+  - name: sf - ensure directories exist
+    file:
+      path: "{{ item }}"
+      state: directory
+    loop:
+      - "{{ applications_dir }}"
+      - "{{ factory_dir }}"
+
+  - name: sf - create argocd application
+    template:
+      src: "argocd-application.yml.j2"
+      dest: "{{ applications_dir }}/{{ software_factory.name }}.application.yml"
+    register: application_resource
+    vars:
+      application_name: "{{ software_factory.name }}"
+      repo_url: "{{ scm_state_repo }}"
+      repo_revision: "{{ scm_branch }}"
+      repo_path: "software-factories/{{ software_factory.name }}"
+      namespace: "{{ software_factory.name }}"
+
+  - name: sf - template resources for software factory
+    template:
+      src: "{{ item }}"
+      dest: "{{ factory_dir }}"
+    vars:
+      namespace: "{{ software_factory.name }}"
+    register: template_resources
+    with_fileglob:
+      - "templates/factory/*.yaml"
+
+  - name: scm - git add all changes
+    shell: "git add -A"
+    args:
+      chdir: "{{ scm_dir }}"
+    when: application_resource.changed or template_resources.changed
+
+  - name: scm - commit all changes
+    shell: "git commit -m 'Commit resources for service request {{ jsm_issue_id }}'"
+    args:
+      chdir: "{{ scm_dir }}"
+    when: application_resource.changed or template_resources.changed
+
+  - name: scm - push all changes
+    shell: "git push origin {{ scm_branch }}"
+    args:
+      chdir: "{{ scm_dir }}"
+    when: application_resource.changed or template_resources.changed
+
+  - debug: var=scm_dir
