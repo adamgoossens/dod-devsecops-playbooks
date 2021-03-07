@@ -46,7 +46,9 @@
       src: "{{ lookup('env', 'SSH_PRIVATE_KEY_FILE') }}"
     register: foo
 
-  - debug: var=foo
+  - set_fact:
+      bar: "{{ foo.content | b64decode }}"
+  - debug: var=bar
 
   - name: scm - checkout state repository
     ansible.builtin.git:
