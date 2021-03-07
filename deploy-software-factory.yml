@@ -17,9 +17,19 @@
       uri: "{{ jsm_api }}"
       username: "{{ lookup('env', 'ATLASSIAN_API_USERNAME') }}"
       password: "{{ lookup('env', 'ATLASSIAN_API_TOKEN') }}"
+
+    community.kubernetes.k8s_auth:
+      host: "{{ lookup('env', 'OPENSHIFT_API_URL') }}"
+      validate_certs: "{{ not (lookup('env', 'OPENSHIFT_API_INSECURE_CERTS') | bool) }}"
+
+    community.kubernetes.k8s_info:
+      host: "{{ lookup('env', 'OPENSHIFT_API_URL') }}"
+      validate_certs: "{{ not (lookup('env', 'OPENSHIFT_API_INSECURE_CERTS') | bool) }}"
+
   vars:
     jira_var_lookups:
       project_name: 'customfield_10054'
+
   tasks:
   - include_tasks: tasks/jira-fetch-issue.yml
 
@@ -37,6 +47,7 @@
       repo: "{{ scm_state_repo }}"
       dest: "{{ scm_dir }}"
       version: "{{ scm_branch }}"
+      key_file: "{{ lookup('env', 'SSH_PRIVATE_KEY_FILE') }}"
 
   - name: sf - create software factory name
     set_fact:
@@ -77,22 +88,118 @@
     with_fileglob:
       - "templates/factory/*.yaml"
 
+  - set_fact:
+      git_cmd: "git -i {{ lookup('env', 'SSH_PRIVATE_KEY_FILE') }}"
+
   - name: scm - git add all changes
-    shell: "git add -A"
+    shell: "{{ git_cmd }} add -A"
     args:
       chdir: "{{ scm_dir }}"
     when: application_resource.changed or template_resources.changed
 
   - name: scm - commit all changes
-    shell: "git commit -m 'Commit resources for service request {{ jsm_issue_id }}'"
+    shell: "{{ git_cmd }} commit -m 'Commit resources for service request {{ jsm_issue_id }}'"
     args:
       chdir: "{{ scm_dir }}"
     when: application_resource.changed or template_resources.changed
 
   - name: scm - push all changes
-    shell: "git push origin {{ scm_branch }}"
+    shell: "{{ git_cmd }} push origin {{ scm_branch }}"
     args:
       chdir: "{{ scm_dir }}"
     when: application_resource.changed or template_resources.changed
 
-  - debug: var=scm_dir
+  - name: sf - get kubernetes auth token
+    community.kubernetes.k8s_auth:
+      username: "{{ lookup('env', 'OPENSHIFT_API_USERNAME') }}"
+      password: "{{ lookup('env',' OPENSHIFT_API_PASSWORD') }}"
+    register: k8s_auth_results
+
+  - name: sf - wait for ArgoCD Application to be created (10 sec poll, up to 5 minutes)
+    community.kubernetes.k8s_info:
+      api_version: argoproj.io/v1alpha1
+      kind: Application
+      name: "{{ software_factory.name }}"
+      namespace: "argocd"
+      api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
+
+    register: argocd_app
+    until: argocd_app.resources|length > 0
+    retries: 30
+    delay: 10
+
+  - name: sf - wait for ArgoCD application to sync (10 sec poll, up to 5 minutes)
+    community.kubernetes.k8s_info:
+      api_version: argoproj.io/v1alpha1
+      kind: Application
+      name: "{{ software_factory.name }}"
+      namespace: "argocd"
+      api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
+
+    register: argocd_app
+    until: "argocd_app.resources[0].status.sync.status == 'Synced'"
+    delay: 10
+    retries: 30
+
+  - name: sf - wait for TsscPlatform to finish rollout (30 sec poll, up to 30 minutes)
+    community.kubernetes.k8s_info:
+      api_version: redhatgov.io/v1alpha1
+      kind: TsscPlatform
+      name: software-factory
+      namespace: "{{ software_factory.name }}"
+      api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
+
+    register: factory_resource
+    until: "factory_resource.resources[0].status.conditions[0].reason == 'Successful'"
+    delay: 30
+    retries: 60
+
+  - name: sf - fetch required routes
+    community.kubernetes.k8s_info:
+      api_version: route.openshift.io/v1
+      kind: Route
+      name: "{{ item }}"
+      namespace: "{{ software_factory.name }}"
+    register: sf_routes
+    loop:
+      - codeready
+      - jenkins
+      - mattermost-mattermost
+      - gitea
+      - nexus
+      - sonarqube
+
+  - name: sf - set route facts
+    set_fact:
+      factory_routes: "{{ factory_routes|default({})|combine({item.metadata.name: item.spec.host}) }}"
+    loop: "{{ sf_routes | json_query('results[*].resources[0]') }}"
+
+  - name: sf - build Jira comment
+    set_fact:
+      jira_comment: |
+        Hello!
+
+        Your new software factory, {{ jira_field_project_name }}, has been provisioned successfully.
+
+        Your key tools are available at the following links:
+
+        * [Jenkins|https://{{ factory_routes['jenkins'] }}] (Continuous Integration/Continuous Deployment)
+        * [Sonatype Nexus|https://{{ factory_routes['nexus'] }}] (Artifact Repository)
+        * [Red Hat CodeReady Workspaces|https://{{ factory_routes['codeready'] }}] (Browser-based Integrated Development Environment)
+        * [Gitea|https://{{factory_routes['gitea']}}] (Open Source Git Platform)
+       
+        *Where to from here?*
+
+        As a next step, you should establish a new repository within Gitea and create a new Trusted Software Pipeline.
+
+        You can use the self-service catalog item, *Create a new Trusted Software Pipeline*, to create a pipeline within your software factory.
+
+        *What happens when the project is over?*
+
+        When the project is over, use the self-service catalog item *Close Software Factory* to retire your factory and all corresponding resources.
+
+  - name: jsm - add comment to ticket
+    community.general.jira:
+      operation: comment
+      issue: "{{ jsm_issue_id }}"
+      comment: "{{ jira_comment }}"
