@@ -42,7 +42,7 @@
       scm_dir: "{{ tempdir.path }}"
       scm_branch: "main"
 
-  - shell: 'cat {{ lookup("env", "SSH_PRIVATE_KEY_FILE") }} | base64 -d > {{ lookup("env", "SSH_PRIVATE_KEY_FILE") }}'
+  - shell: 'echo "\n" >> {{ lookup("env", "SSH_PRIVATE_KEY_FILE") }}'
 
   - pause:
       seconds: 3600
