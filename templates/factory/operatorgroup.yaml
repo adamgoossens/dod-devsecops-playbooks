@@ -5,7 +5,7 @@ metadata:
   name: software-factory-og
   namespace: {{ namespace }}
   annotations:
-    argocd.argoproj.io/sync-wave: "20"
+    argocd.argoproj.io/sync-wave: "10"
 spec:
   targetNamespaces:
   - {{ namespace }}

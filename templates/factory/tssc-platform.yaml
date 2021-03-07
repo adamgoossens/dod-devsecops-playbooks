@@ -2,7 +2,8 @@ apiVersion: redhatgov.io/v1alpha1
 kind: TsscPlatform
 metadata:
   name: software-factory
-  namespace: "{{ namespace }}"
+  annotations:
+    argocd.argoproj.io/sync-wave: "30"
 spec:
   tsscPlatform:
     providers:
