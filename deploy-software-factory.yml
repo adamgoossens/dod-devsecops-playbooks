@@ -42,6 +42,9 @@
       scm_dir: "{{ tempdir.path }}"
       scm_branch: "main"
 
+  # due to a bug in tower/awx, the required trailing newline isn't added to
+  # the private key tempfile. Add one. Without it, SSH will complain that the
+  # key is in an invalid format.
   - shell: "echo '' >> {{ lookup('env', 'SSH_PRIVATE_KEY_FILE') }}"
 
   - name: scm - checkout state repository
@@ -163,6 +166,7 @@
       kind: Route
       name: "{{ item }}"
       namespace: "{{ software_factory.name }}"
+      api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
     register: sf_routes
     loop:
       - codeready
