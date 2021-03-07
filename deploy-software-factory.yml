@@ -42,6 +42,12 @@
       scm_dir: "{{ tempdir.path }}"
       scm_branch: "main"
 
+  - slurp:
+      src: "{{ lookup('file', lookup('env', 'SSH_PRIVATE_KEY_FILE')) }}"
+    register: foo
+
+  - debug: var=foo
+
   - name: scm - checkout state repository
     ansible.builtin.git:
       repo: "{{ scm_state_repo }}"
