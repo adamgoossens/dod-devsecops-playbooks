@@ -43,7 +43,7 @@
       scm_branch: "main"
 
   - slurp:
-      src: "{{ lookup('file', lookup('env', 'SSH_PRIVATE_KEY_FILE')) }}"
+      src: "{{ lookup('env', 'SSH_PRIVATE_KEY_FILE')) }}"
     register: foo
 
   - debug: var=foo
