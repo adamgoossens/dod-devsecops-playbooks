@@ -48,6 +48,7 @@
       dest: "{{ scm_dir }}"
       version: "{{ scm_branch }}"
       key_file: "{{ lookup('env', 'SSH_PRIVATE_KEY_FILE') }}"
+      accept_hostkey: 'yes'
 
   - name: sf - create software factory name
     set_fact:
