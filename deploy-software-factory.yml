@@ -37,7 +37,7 @@
     community.general.jira:
       operation: transition
       issue: "{{ jsm_issue_id }}"
-      status: "In Progress"
+      status: "In progress"
 
   - name: jsm - add comment to ticket
     community.general.jira:
@@ -248,6 +248,6 @@
       issue: "{{ jsm_issue_id }}"
       status: "{{ item }}"
     loop:
-      - Resolved
-      - Closed
+      - Resolve this issue
+      - Close
 
