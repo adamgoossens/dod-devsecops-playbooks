@@ -1,0 +1,13 @@
+---
+- name: jsm - transition
+	community.general.jira:
+		operation: transition
+		issue: "{{ jsm_issue_id }}"
+		status: "{{ item }}"
+  loop: "{{ transitions|default([]) }}"
+
+- name: jsm - comment
+  community.general.jira:
+    operation: comment
+    issue: "{{ jsm_issue_id }}"
+    comment: "{{ comment }}"

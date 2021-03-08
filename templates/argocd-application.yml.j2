@@ -7,7 +7,9 @@ metadata:
 spec:
   project: default
   syncPolicy:
-    automated: {}
+    automated:
+      prune: true
+      selfHeal: true
   source:
     repoURL: "{{ repo_url }}"
     targetRevision: "{{ repo_revision }}"

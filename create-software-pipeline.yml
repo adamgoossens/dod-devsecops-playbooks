@@ -1,0 +1,88 @@
+#####################################################################
+#
+# Expected input:
+#   - jsm_issue_id: a key to the Jira Service Management issue
+#
+# Description: Fetches required information from the JSM issue,
+# verifies the software factory name, creates a new software pipeline.
+#
+#####################################################################
+- hosts: localhost
+  gather_facts: false
+  module_defaults:
+    community.general.jira:
+      uri: "{{ jsm_api }}"
+      username: "{{ lookup('env', 'ATLASSIAN_API_USERNAME') }}"
+      password: "{{ lookup('env', 'ATLASSIAN_API_TOKEN') }}"
+
+    community.kubernetes.k8s_auth:
+      host: "{{ lookup('env', 'OPENSHIFT_API_URL') }}"
+      validate_certs: "{{ not (lookup('env', 'OPENSHIFT_API_INSECURE_CERTS') | bool) }}"
+
+    community.kubernetes.k8s_info:
+      host: "{{ lookup('env', 'OPENSHIFT_API_URL') }}"
+      validate_certs: "{{ not (lookup('env', 'OPENSHIFT_API_INSECURE_CERTS') | bool) }}"
+
+  vars:
+    jira_var_lookups:
+      project_name: 'customfield_10054'
+
+  tasks:
+  - include_tasks: tasks/jira-fetch-issue.yml
+  - include_tasks: tasks/jira-comment.yml
+    vars:
+      transitions:
+        - "In progress"
+      comment: |
+        Hello!
+
+        Your request to provision a new software pipeline has been received.
+
+        It will be actioned automatically. I will let you know when it is successful, or if there are any errors.
+
+        Please sit tight.
+
+        Thanks.
+
+  - include_tasks: tasks/checkout-state-repo.yml
+    vars:
+      key_file: "{{ lookup('env', 'SSH_PRIVATE_KEY_FILE') }}"
+
+  - name: sf - create software factory name
+    set_fact:
+      software_factory:
+        name: "sf-{{ jira_field_project_name | lower | regex_replace('[^a-zA-Z0-9 ]','') | regex_replace(' ','-') }}"
+  
+  - set_fact:
+      applications_dir: "{{ scm_dir }}/argocd-applications"
+      factory_dir: "{{ scm_dir }}/software-factories/{{software_factory.name}}"
+
+  - ansible.builtin.stat:
+      path: "{{ applications_dir }}/{{software_factory.name}}.application.yml"
+    register: stat_app_yaml
+
+  - block:
+    when:
+      - not stat_app_yaml.stat.exists
+    tasks:
+      - include_tasks: tasks/jira-comment.yml
+        vars:
+          comment: |
+            Hi,
+
+            Unfortunately, I can't find your nominated software factory and so I am unable to complete this ticket.
+
+            Please double check your software factory name and please re-submit.
+
+            I will close this ticket, but you are free to open another ticket with corrected information.
+
+            Thanks.
+          transitions:
+            - Cancel request
+            - Close
+
+      - meta: end_play
+
+  #
+  # if we get here, it means the software factory was found in state.
+  #
