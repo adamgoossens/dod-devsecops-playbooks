@@ -27,23 +27,13 @@
   vars:
     jira_var_lookups:
       project_name: 'customfield_10054'
+      application_name: 'customfield_10055'
 
   tasks:
   - include_tasks: tasks/jira-fetch-issue.yml
-  - include_tasks: tasks/jira-comment.yml
-    vars:
-      transitions:
-        - { status: "In Progress", transition: "In progress" }
-      comment: |
-        Hello!
 
-        Your request to provision a new software pipeline has been received.
-
-        It will be actioned automatically. I will let you know when it is successful, or if there are any errors.
-
-        Please sit tight.
-
-        Thanks.
+  - set_fact:
+      pipeline_name: "{{ jira_field_application_name|lower }}"
 
   - include_tasks: tasks/checkout-state-repo.yml
     vars:
@@ -86,3 +76,58 @@
   #
   # if we get here, it means the software factory was found in state.
   #
+  # because we're slack for the time being, let's just create a bog standard TsscPipeline resource
+  # just like the sample.
+  - name: pipeline - create tsscpipeline resource
+    template:
+      src: pipeline/sample-tssc-pipeline.yml
+      dest: "{{ factory_dir }}"
+    register: pipeline_template
+
+  - when:
+    - pipeline_template.changed
+    block:
+    - include_tasks: tasks/git-commit-push.yml
+      vars:
+        key_file: "{{ lookup('env', 'SSH_PRIVATE_KEY_FILE') }}"
+        commit_message: "Adding new software pipeline '{{ pipeline_name }}' to software factory '{{ software_factory.name }}'"
+
+    - include_tasks: tasks/jira-comment.yml
+      vars:
+        transitions:
+          - { status: "In Progress", transition: "In progress" }
+        comment: |
+          Hello!
+
+          Your request to provision a new software pipeline has been received.
+
+          It will be actioned automatically. Your pipeline has been added to the system of record and is now undergoing provisioning.
+
+          Please sit tight.
+
+          Thanks.
+
+  - name: k8s - get kubernetes auth token 
+    community.kubernetes.k8s_auth: 
+      username: "{{ lookup('env', 'OPENSHIFT_API_USERNAME') }}" 
+      password: "{{ lookup('env',' OPENSHIFT_API_PASSWORD') }}" 
+    register: k8s_auth_results
+
+  - name: k8s - wait for tsscpipeline to finish rollout
+    community.kubernetes.k8s_info:
+      api_version: redhatgov.io/v1alpha1
+      kind: TsscPipeline
+      name: "sp-{{ pipeline_name }}"
+      namespace: "{{ software_factory.name }}"
+      api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
+    register: pipeline_resource
+    until: pipeline_resource.resources[0].status | json_query("conditions[?(@.reason=='Successful')]")
+
+  - name: jsm - comment and close
+    include_tasks: tasks/jira-comment.yml
+    vars:
+      transitions:
+        - { transition: "Resolve this issue", status: "Resolved" }
+        - { transition: "Close", status: "Closed" }
+      comment: |
+        Hi, your new pipeline has been provisioned successfully. Repositories are available within Gitea and you can view the state of the pipeline through your Jenkins instance.

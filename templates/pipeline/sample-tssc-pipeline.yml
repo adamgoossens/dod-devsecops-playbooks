@@ -1,0 +1,14 @@
+apiVersion: redhatgov.io/v1alpha1
+kind: TsscPipeline
+metadata:
+  name: sp-{{ pipeline_name }}
+spec:
+  appName: ref-quarkus-mvn-jenkins-std
+  serviceName: fruit
+  appRepo:
+    sourceUrl: http://github.com/adamgoossens/reference-quarkus-mvn_jenkins_workflow-standard.git
+    destinationRepoName: reference-quarkus-mvn_jenkins_workflow-standard
+  helmRepo:
+    sourceUrl: http://github.com/adamgoossens/reference-quarkus-mvn-cloud-resources_jenkins_workflow-standard.git
+    destinationRepoName: reference-quarkus-mvn-cloud-resources_jenkins_workflow-standard
+  autoStartPipeline: false
