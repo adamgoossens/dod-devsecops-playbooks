@@ -32,7 +32,7 @@
   - include_tasks: tasks/jira-comment.yml
     vars:
       transitions:
-        - "In progress"
+        - { status: "In Progress", transition: "In progress" }
       comment: |
         Hello!
 
@@ -61,10 +61,9 @@
       path: "{{ applications_dir }}/{{software_factory.name}}.application.yml"
     register: stat_app_yaml
 
-  - block:
-    when:
+  - when:
       - not stat_app_yaml.stat.exists
-    tasks:
+    block:
       - include_tasks: tasks/jira-comment.yml
         vars:
           comment: |
@@ -78,8 +77,8 @@
 
             Thanks.
           transitions:
-            - Cancel request
-            - Close
+            - { status: "Canceled", transition: "Cancel request" }
+            - { status: "Closed", transition: "Close" }
 
       - meta: end_play
 
