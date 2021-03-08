@@ -33,6 +33,27 @@
   tasks:
   - include_tasks: tasks/jira-fetch-issue.yml
 
+  - name: jsm - transition to In Progress
+    community.general.jira:
+      operation: transition
+      issue: "{{ jsm_issue_id }}"
+      status: "In Progress"
+
+  - name: jsm - add comment to ticket
+    community.general.jira:
+      operation: comment
+      issue: "{{ jsm_issue_id }}"
+      comment: |
+        Hello!
+
+        Your request to provision a new software factory has been approved.
+
+        It will be automatically rolled out. Please be patient, as this can take between 30 minutes and an hour to complete.
+
+        Once the software factory is online I'll add another comment on this ticket, advising you of how you can get started.
+
+        Thanks.
+
   - name: scm - generate tempdir for checkout
     tempfile:
       state: directory
@@ -220,3 +241,13 @@
       operation: comment
       issue: "{{ jsm_issue_id }}"
       comment: "{{ jira_comment }}"
+
+  - name: jsm - transition to Resolved and Closed
+    community.general.jira:
+      operation: transition
+      issue: "{{ jsm_issue_id }}"
+      status: "{{ item }}"
+    loop:
+      - Resolved
+      - Closed
+
