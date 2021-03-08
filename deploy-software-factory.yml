@@ -99,6 +99,8 @@
 
   - name: scm - set git config
     shell: "{{ git_cmd }} config {{ item }}"
+    args:
+      chdir: "{{ scm_dir }}"
     loop:
       - "user.name 'Ansible Automation Platform'"
       - "user.email 'ansible@home.lab'"
