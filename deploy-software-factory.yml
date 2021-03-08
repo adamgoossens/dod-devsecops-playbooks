@@ -97,6 +97,12 @@
   - set_fact:
       git_cmd: "GIT_SSH_COMMAND='ssh -i {{ lookup('env', 'SSH_PRIVATE_KEY_FILE') }}' git"
 
+  - name: scm - set git config
+    shell: "{{ git_cmd }} config {{ item }}"
+    loop:
+      - "user.name 'Ansible Automation Platform'"
+      - "user.email 'ansible@home.lab'"
+
   - name: scm - git add all changes
     shell: "{{ git_cmd }} add -A"
     args:
