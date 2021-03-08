@@ -164,7 +164,9 @@
       api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
 
     register: factory_resource
-    until: "factory_resource.resources[0].status.conditions[0].reason == 'Successful'"
+    until: 
+      - "'status' in factory_resource.resources[0].keys()"
+      - "factory_resource.resources[0].status.conditions[0].reason == 'Successful'"
     delay: 30
     retries: 60
 
