@@ -9,6 +9,7 @@
 #####################################################################
 - hosts: localhost
   gather_facts: false
+  connection: local
   module_defaults:
     community.general.jira:
       uri: "{{ jsm_api }}"
