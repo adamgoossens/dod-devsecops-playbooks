@@ -95,7 +95,7 @@
       - "templates/factory/*.yaml"
 
   - set_fact:
-      git_cmd: "GIT_SSH_COMMAND='ssh -i {{ lookup('env', 'SSH_PRIVATE_KEY_FILE') }}'"
+      git_cmd: "GIT_SSH_COMMAND='ssh -i {{ lookup('env', 'SSH_PRIVATE_KEY_FILE') }}' git"
 
   - name: scm - git add all changes
     shell: "{{ git_cmd }} add -A"
