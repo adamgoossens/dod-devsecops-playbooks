@@ -121,7 +121,10 @@
       namespace: "{{ software_factory.name }}"
       api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
     register: pipeline_resource
-    until: pipeline_resource.resources[0].status | json_query("conditions[?(@.reason=='Successful')]")
+    until: 
+      - pipeline_resource.resources | length > 0
+      - pipeline_resource.resources[0].status is defined
+      - pipeline_resource.resources[0].status | json_query("conditions[?(@.reason=='Successful')]")
 
   - name: jsm - comment and close
     include_tasks: tasks/jira-comment.yml
