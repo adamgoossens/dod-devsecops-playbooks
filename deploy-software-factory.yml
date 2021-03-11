@@ -151,19 +151,6 @@
       password: "{{ lookup('env',' OPENSHIFT_API_PASSWORD') }}"
     register: k8s_auth_results
 
-  - name: sf - wait for ArgoCD Application to be created (10 sec poll, up to 5 minutes)
-    community.kubernetes.k8s_info:
-      api_version: argoproj.io/v1alpha1
-      kind: Application
-      name: "{{ software_factory.name }}"
-      namespace: "argocd"
-      api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
-
-    register: argocd_app
-    until: argocd_app.resources|length > 0
-    retries: 30
-    delay: 10
-
   - name: sf - wait for ArgoCD application to sync (10 sec poll, up to 5 minutes)
     community.kubernetes.k8s_info:
       api_version: argoproj.io/v1alpha1
@@ -171,9 +158,11 @@
       name: "{{ software_factory.name }}"
       namespace: "argocd"
       api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
-
     register: argocd_app
-    until: "argocd_app.resources[0].status.sync.status == 'Synced'"
+    until: 
+      - argocd_app.resources | length > 0
+      - argocd_app.resources[0].status is defined
+      - "argocd_app.resources[0].status.sync.status == 'Synced'"
     delay: 10
     retries: 30
 
