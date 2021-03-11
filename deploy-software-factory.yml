@@ -34,16 +34,11 @@
   tasks:
   - include_tasks: tasks/jira-fetch-issue.yml
 
-  - name: jsm - transition to In Progress
-    community.general.jira:
-      operation: transition
-      issue: "{{ jsm_issue_id }}"
-      status: "In progress"
-
   - name: jsm - add comment to ticket
-    community.general.jira:
-      operation: comment
-      issue: "{{ jsm_issue_id }}"
+    include_tasks: tasks/jira-comment.yml
+    vars:
+      transitions:
+        - { status: "In Progress", transition: "In progress" }
       comment: |
         Hello!
 
@@ -55,27 +50,9 @@
 
         Thanks.
 
-  - name: scm - generate tempdir for checkout
-    tempfile:
-      state: directory
-    register: tempdir
-
-  - set_fact:
-      scm_dir: "{{ tempdir.path }}"
-      scm_branch: "main"
-
-  # due to a bug in tower/awx, the required trailing newline isn't added to
-  # the private key tempfile. Add one. Without it, SSH will complain that the
-  # key is in an invalid format.
-  - shell: "echo '' >> {{ lookup('env', 'SSH_PRIVATE_KEY_FILE') }}"
-
-  - name: scm - checkout state repository
-    ansible.builtin.git:
-      repo: "{{ scm_state_repo }}"
-      dest: "{{ scm_dir }}"
-      version: "{{ scm_branch }}"
+  - include_tasks: tasks/checkout-state-repo.yml
+    vars:
       key_file: "{{ lookup('env', 'SSH_PRIVATE_KEY_FILE') }}"
-      accept_hostkey: 'yes'
 
   - name: sf - create software factory name
     set_fact:
@@ -116,34 +93,14 @@
     with_fileglob:
       - "templates/factory/*.yaml"
 
-  - set_fact:
-      git_cmd: "GIT_SSH_COMMAND='ssh -i {{ lookup('env', 'SSH_PRIVATE_KEY_FILE') }}' git"
+  - when:
+    - template_resources.changed
+    block:
 
-  - name: scm - set git config
-    shell: "{{ git_cmd }} config {{ item }}"
-    args:
-      chdir: "{{ scm_dir }}"
-    loop:
-      - "user.name 'Ansible Automation Platform'"
-      - "user.email 'ansible@home.lab'"
-
-  - name: scm - git add all changes
-    shell: "{{ git_cmd }} add -A"
-    args:
-      chdir: "{{ scm_dir }}"
-    when: application_resource.changed or template_resources.changed
-
-  - name: scm - commit all changes
-    shell: "{{ git_cmd }} commit -m 'Commit resources for service request {{ jsm_issue_id }}'"
-    args:
-      chdir: "{{ scm_dir }}"
-    when: application_resource.changed or template_resources.changed
-
-  - name: scm - push all changes
-    shell: "{{ git_cmd }} push origin {{ scm_branch }}"
-    args:
-      chdir: "{{ scm_dir }}"
-    when: application_resource.changed or template_resources.changed
+    - include_tasks: tasks/git-commit-push.yml
+    vars:
+      key_file: "{{ lookup('env', 'SSH_PRIVATE_KEY_FILE') }}"
+      commit_message: "Commit resources for software factory '{{software_factory.name}}' from service request {{ jsm_issue_id }}"
 
   - name: sf - get kubernetes auth token
     community.kubernetes.k8s_auth:
@@ -175,8 +132,9 @@
       api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
 
     register: factory_resource
-    until: 
-      - "'status' in factory_resource.resources[0].keys()"
+    until:
+      - factory_resource.resources | length > 0
+      - factory_resource.resources[0].status is defined
       - "factory_resource.resources[0].status.conditions[0].reason == 'Successful'"
     delay: 30
     retries: 60
@@ -202,9 +160,13 @@
       factory_routes: "{{ factory_routes|default({})|combine({item.metadata.name: item.spec.host}) }}"
     loop: "{{ sf_routes | json_query('results[*].resources[0]') }}"
 
-  - name: sf - build Jira comment
-    set_fact:
-      jira_comment: |
+  - name: jsm - comment and close
+    include_tasks: tasks/jira-comment.yml
+    vars:
+      transitions:
+        - { transition: "Resolve this issue", status: "Resolved" }
+        - { transition: "Close", status: "Closed" }
+      comment: |
         Hello!
 
         Your new software factory, {{ jira_field_project_name }}, has been provisioned successfully.
@@ -216,28 +178,3 @@
         * [Red Hat CodeReady Workspaces|https://{{ factory_routes['codeready'] }}] (Browser-based Integrated Development Environment)
         * [Gitea|https://{{factory_routes['gitea']}}] (Open Source Git Platform)
        
-        *Where to from here?*
-
-        As a next step, you should establish a new repository within Gitea and create a new Trusted Software Pipeline.
-
-        You can use the self-service catalog item, *Create a new Trusted Software Pipeline*, to create a pipeline within your software factory.
-
-        *What happens when the project is over?*
-
-        When the project is over, use the self-service catalog item *Close Software Factory* to retire your factory and all corresponding resources.
-
-  - name: jsm - add comment to ticket
-    community.general.jira:
-      operation: comment
-      issue: "{{ jsm_issue_id }}"
-      comment: "{{ jira_comment }}"
-
-  - name: jsm - transition to Resolved and Closed
-    community.general.jira:
-      operation: transition
-      issue: "{{ jsm_issue_id }}"
-      status: "{{ item }}"
-    loop:
-      - Resolve this issue
-      - Close
-
