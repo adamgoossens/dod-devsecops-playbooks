@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: helms-deep
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  destination:
+    namespace: helms-deep
+    server: https://kubernetes.default.svc
+  project: default
+  source:
+    path: argocd-applications
+    repoURL: git@github.com:adamgoossens/dod-devsecops-state.git
+    targetRevision: main
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
