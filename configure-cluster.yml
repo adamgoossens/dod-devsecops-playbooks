@@ -32,7 +32,7 @@
         password: "{{ lookup('env',' OPENSHIFT_API_PASSWORD') }}"
       register: k8s_auth_results
 
-    - name: remove LimitRange from default project template
+    - name: apply kubernetes resources
       community.kubernetes.k8s:
         api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
         merge_type: 'merge'
