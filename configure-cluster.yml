@@ -34,6 +34,7 @@
 
     - name: remove LimitRange from default project template
       k8s:
+        api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
         merge_type: 'merge'
         definition:
           apiVersion: template.openshift.io/v1
@@ -139,6 +140,7 @@
 
     - name: create argocd project
       k8s:
+        api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
         definition:
           apiVersion: v1
           kind: Namespace
@@ -148,6 +150,7 @@
 
     - name: create an OperatorGroup for argocd
       k8s:
+        api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
         definition:
           apiVersion: operators.coreos.com/v1
           kind: OperatorGroup
@@ -160,6 +163,7 @@
 
     - name: create subscription for community argocd operator
       k8s:
+        api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
         definition:
           apiVersion: operators.coreos.com/v1alpha1
           kind: Subscription
@@ -176,6 +180,7 @@
 
     - name: create cluster-admin CRB for argocd-application-server
       k8s:
+        api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
         definition:
           apiVersion: rbac.authorization.k8s.io/v1
           kind: ClusterRoleBinding
@@ -192,6 +197,7 @@
 
     - name: create argocd
       k8s:
+        api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
         definition:
           apiVersion: argoproj.io/v1alpha1
           kind: ArgoCD
@@ -205,6 +211,7 @@
 
     - name: wait for argocd to rollout
       k8s_info:
+        api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
         api_version: argoproj.io/v1alpha1
         kind: ArgoCD
         name: helms-deep
@@ -219,6 +226,7 @@
 
     - name: get route for argocd
       k8s_info:
+        api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
         api_version: route.openshift.io/v1
         kind: Route
         name: helms-deep-server
@@ -227,6 +235,7 @@
 
     - name: get argocd login secret
       k8s_info:
+        api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
         api_version: v1
         kind: Secret
         name: helms-deep-cluster
@@ -260,5 +269,3 @@
           sshPrivateKey: "{{ lookup('file', lookup('env', 'SSH_PRIVATE_KEY_FILE')) }}"
         validate_certs: false
       register: create_repo
-     
-    - debug: var=create_repo
