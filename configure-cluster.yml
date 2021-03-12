@@ -85,7 +85,7 @@
       register: auth_token_raw
 
     - set_fact:
-        auth_token: "{{ auth_token_raw.json.token }}"
+        auth_token: "{{ auth_token_raw.json['token'] }}"
 
     - name: get existing repository
       uri:
@@ -101,10 +101,9 @@
       failed_when:
         - repo.status not in [200, 404]
 
-    - debug: var=repo
-
+    - debug: var=repo.json['items']
     - when:
-      - repo.status == 404
+      - repo.json['items'] == None
       name: create repository
       uri:
         url: "https://{{ argocd_server_route.resources[0].spec.host }}/api/v1/repositories"
