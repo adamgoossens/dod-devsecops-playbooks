@@ -26,6 +26,12 @@
       validate_certs: "{{ not (lookup('env', 'OPENSHIFT_API_INSECURE_CERTS') | bool) }}"
 
   tasks:
+		- name: k8s - get kubernetes auth token
+			community.kubernetes.k8s_auth:
+				username: "{{ lookup('env', 'OPENSHIFT_API_USERNAME') }}"
+				password: "{{ lookup('env',' OPENSHIFT_API_PASSWORD') }}"
+			register: k8s_auth_results
+
     - name: remove LimitRange from default project template
       k8s:
         merge_type: 'merge'
