@@ -121,6 +121,8 @@
       namespace: "{{ software_factory.name }}"
       api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
     register: pipeline_resource
+    delay: 30
+    retries: 10
     until: 
       - pipeline_resource.resources | length > 0
       - pipeline_resource.resources[0].status is defined

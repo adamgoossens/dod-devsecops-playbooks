@@ -2,6 +2,9 @@ apiVersion: redhatgov.io/v1alpha1
 kind: TsscPipeline
 metadata:
   name: sp-{{ pipeline_name }}
+  annotations:
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+    argocd.argoproj.io/sync-wave: "90"
 spec:
   appName: ref-quarkus-mvn-jenkins-std
   serviceName: fruit
