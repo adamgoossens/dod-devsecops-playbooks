@@ -33,184 +33,15 @@
       register: k8s_auth_results
 
     - name: remove LimitRange from default project template
-      k8s:
+      community.kubernetes.k8s:
         api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
         merge_type: 'merge'
-        definition:
-          apiVersion: template.openshift.io/v1
-          kind: Template
-          metadata:
-            name: project-request
-            namespace: openshift-config
-          objects:
-          - apiVersion: networking.k8s.io/v1
-            kind: NetworkPolicy
-            metadata:
-              name: allow-from-all-namespaces
-            spec:
-              ingress:
-              - from:
-                - namespaceSelector: {}
-              podSelector: {}
-          - apiVersion: networking.k8s.io/v1
-            kind: NetworkPolicy
-            metadata:
-              name: allow-from-ingress-namespace
-            spec:
-              ingress:
-              - from:
-                - namespaceSelector:
-                    matchLabels:
-                      network-policy: global
-              podSelector: null
-          - apiVersion: project.openshift.io/v1
-            kind: Project
-            metadata:
-              annotations:
-                openshift.io/description: ${PROJECT_DESCRIPTION}
-                openshift.io/display-name: ${PROJECT_DISPLAYNAME}
-                openshift.io/requester: ${PROJECT_REQUESTING_USER}
-              name: ${PROJECT_NAME}
-            spec: {}
-            status: {}
-          - apiVersion: rbac.authorization.k8s.io/v1
-            kind: RoleBinding
-            metadata:
-              annotations:
-                openshift.io/description: Allows all pods in this namespace to pull images from this namespace.  It is auto-managed by a controller; remove subjects to disable.
-              name: system:image-pullers
-              namespace: ${PROJECT_NAME}
-            roleRef:
-              apiGroup: rbac.authorization.k8s.io
-              kind: ClusterRole
-              name: system:image-puller
-            subjects:
-            - apiGroup: rbac.authorization.k8s.io
-              kind: Group
-              name: system:serviceaccounts:${PROJECT_NAME}
-          - apiVersion: rbac.authorization.k8s.io/v1
-            kind: RoleBinding
-            metadata:
-              annotations:
-                openshift.io/description: Allows builds in this namespace to push images to this namespace.  It is auto-managed by a controller; remove subjects to disable.
-              name: system:image-builders
-              namespace: ${PROJECT_NAME}
-            roleRef:
-              apiGroup: rbac.authorization.k8s.io
-              kind: ClusterRole
-              name: system:image-builder
-            subjects:
-            - kind: ServiceAccount
-              name: builder
-              namespace: ${PROJECT_NAME}
-          - apiVersion: rbac.authorization.k8s.io/v1
-            kind: RoleBinding
-            metadata:
-              annotations:
-                openshift.io/description: Allows deploymentconfigs in this namespace to rollout pods in this namespace.  It is auto-managed by a controller; remove subjects to disable.
-              name: system:deployers
-              namespace: ${PROJECT_NAME}
-            roleRef:
-              apiGroup: rbac.authorization.k8s.io
-              kind: ClusterRole
-              name: system:deployer
-            subjects:
-            - kind: ServiceAccount
-              name: deployer
-              namespace: ${PROJECT_NAME}
-          - apiVersion: rbac.authorization.k8s.io/v1
-            kind: RoleBinding
-            metadata:
-              name: admin
-              namespace: ${PROJECT_NAME}
-            roleRef:
-              apiGroup: rbac.authorization.k8s.io
-              kind: ClusterRole
-              name: admin
-            subjects:
-            - apiGroup: rbac.authorization.k8s.io
-              kind: User
-              name: ${PROJECT_ADMIN_USER}
-          parameters:
-          - name: PROJECT_NAME
-          - name: PROJECT_DISPLAYNAME
-          - name: PROJECT_DESCRIPTION
-          - name: PROJECT_ADMIN_USER
-          - name: PROJECT_REQUESTING_USER
-
-    - name: create argocd project
-      k8s:
-        api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
-        definition:
-          apiVersion: v1
-          kind: Namespace
-          metadata:
-            name: argocd
-          spec: {}
-
-    - name: create an OperatorGroup for argocd
-      k8s:
-        api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
-        definition:
-          apiVersion: operators.coreos.com/v1
-          kind: OperatorGroup
-          metadata:
-            name: argocd-og
-            namespace: argocd
-          spec:
-            targetNamespaces:
-            - argocd
-
-    - name: create subscription for community argocd operator
-      k8s:
-        api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
-        definition:
-          apiVersion: operators.coreos.com/v1alpha1
-          kind: Subscription
-          metadata:
-            name: argocd-operator
-            namespace: argocd
-          spec:
-            channel: alpha
-            installPlanApproval: Automatic
-            name: argocd-operator
-            source: community-operators
-            sourceNamespace: openshift-marketplace
-            startingCsv: argocd-operator:v0.0.14
-
-    - name: create cluster-admin CRB for argocd-application-server
-      k8s:
-        api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
-        definition:
-          apiVersion: rbac.authorization.k8s.io/v1
-          kind: ClusterRoleBinding
-          metadata:
-            name: argocd-application-server-cluster-admin
-          roleRef:
-            apiGroup: rbac.authorization.k8s.io
-            kind: ClusterRole
-            name: cluster-admin
-          subjects:
-          - kind: ServiceAccount
-            name: argocd-application-server
-            namespace: argocd
-
-    - name: create argocd
-      k8s:
-        api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
-        definition:
-          apiVersion: argoproj.io/v1alpha1
-          kind: ArgoCD
-          metadata:
-            name: helms-deep
-            namespace: argocd
-          spec:
-            server:
-              route:
-                enabled: true
+        definition: "{{ lookup('file', item) | from_yaml }}"
+      with_fileglob:
+        - "files/config-cluster/*.yaml"
 
     - name: wait for argocd to rollout
-      k8s_info:
+      community.kubernetes.k8s_info:
         api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
         api_version: argoproj.io/v1alpha1
         kind: ArgoCD
@@ -225,7 +56,7 @@
         - "argocd.resources[0].status.phase == 'Available'"
 
     - name: get route for argocd
-      k8s_info:
+      community.kubernetes.k8s_info:
         api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
         api_version: route.openshift.io/v1
         kind: Route
@@ -234,7 +65,7 @@
       register: argocd_server_route
 
     - name: get argocd login secret
-      k8s_info:
+      community.kubernetes.k8s_info:
         api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
         api_version: v1
         kind: Secret
@@ -256,7 +87,25 @@
     - set_fact:
         auth_token: "{{ auth_token_raw.json.token }}"
 
-    - name: create repository
+    - name: get existing repository
+      uri:
+        url: "https://{{ argocd_server_route.resources[0].spec.host }}/api/v1/repositories"
+        method: GET
+        headers:
+          Cookie: "argocd.token={{ auth_token }}"
+        body_format: json
+        body:
+          repo: "git@github.com:adamgoossens/dod-devsecops-state.git"
+        validate_certs: false
+      register: repo
+      failed_when:
+        - repo.status not in [200, 404]
+
+    - debug: var=repo
+
+    - when:
+      - repo.status == 404
+      name: create repository
       uri:
         url: "https://{{ argocd_server_route.resources[0].spec.host }}/api/v1/repositories"
         method: POST
@@ -267,5 +116,6 @@
           name: "devsecops-state"
           repo: "git@github.com:adamgoossens/dod-devsecops-state.git"
           sshPrivateKey: "{{ lookup('file', lookup('env', 'SSH_PRIVATE_KEY_FILE')) }}"
+          upsert: "true"
         validate_certs: false
       register: create_repo
