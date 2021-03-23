@@ -45,7 +45,7 @@
         name: "sf-{{ jira_field_project_name | lower | regex_replace('[^a-zA-Z0-9 ]','') | regex_replace(' ','-') }}"
   
   - set_fact:
-      applications_dir: "{{ scm_dir }}/argocd-applications"
+      applications_dir: "{{ scm_dir }}/software-factories"
       factory_dir: "{{ scm_dir }}/software-factories/{{software_factory.name}}"
 
   - ansible.builtin.stat:
