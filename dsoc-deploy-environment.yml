@@ -26,7 +26,7 @@
 
   vars:
     jira_var_lookups:
-      soc_env_name: 'customfield_10054'
+      soc_env_name: 'customfield_10056'
 
   tasks:
   - include_tasks: tasks/jira-fetch-issue.yml
