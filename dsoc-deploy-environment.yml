@@ -89,6 +89,27 @@
     with_fileglob:
       - "templates/soc/*.yaml"
 
+  - name: soc - get kubernetes auth token
+    community.kubernetes.k8s_auth:
+      username: "{{ lookup('env', 'OPENSHIFT_API_USERNAME') }}"
+      password: "{{ lookup('env',' OPENSHIFT_API_PASSWORD') }}"
+    register: k8s_auth_results
+
+  - name: soc - create namespace
+    community.kubernetes.k8s:
+      api_version: v1
+      kind: Namespace
+      name: "{{ soc_name }}"
+      state: present
+      api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
+
+  - name: soc - create AWS credential secret
+    community.kubernetes.k8s:
+      definition: "{{ lookup('template', 'aws-credentials-secret.yaml') }}"
+      api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
+    vars:
+      namespace: "{{ soc_name }}"
+
   - when:
     - template_resources.changed or application_resource.changed
     block:
@@ -97,12 +118,6 @@
       vars:
         key_file: "{{ lookup('env', 'SSH_PRIVATE_KEY_FILE') }}"
         commit_message: "Commit resources for SOC environment '{{soc_name}}' from service request {{ jsm_issue_id }}"
-
-  - name: soc - get kubernetes auth token
-    community.kubernetes.k8s_auth:
-      username: "{{ lookup('env', 'OPENSHIFT_API_USERNAME') }}"
-      password: "{{ lookup('env',' OPENSHIFT_API_PASSWORD') }}"
-    register: k8s_auth_results
 
   - name: soc - wait for ArgoCD application to sync (10 sec poll, up to 5 minutes)
     community.kubernetes.k8s_info:
@@ -119,6 +134,7 @@
     delay: 10
     retries: 30
 
+  - name: soc - create aws credential secret
   - name: jsm - comment and close
     include_tasks: tasks/jira-comment.yml
     vars:
