@@ -109,7 +109,7 @@
 
   - name: soc - create AWS credential secret
     community.kubernetes.k8s:
-      definition: "{{ lookup('template', 'aws-credentials-secret.yaml') }}"
+      definition: "{{ lookup('template', 'aws-credential-secret.yaml') }}"
       api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
     vars:
       namespace: "{{ soc_name }}"
