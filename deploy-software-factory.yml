@@ -98,9 +98,9 @@
     block:
 
     - include_tasks: tasks/git-commit-push.yml
-    vars:
-      key_file: "{{ lookup('env', 'SSH_PRIVATE_KEY_FILE') }}"
-      commit_message: "Commit resources for software factory '{{software_factory.name}}' from service request {{ jsm_issue_id }}"
+      vars:
+        key_file: "{{ lookup('env', 'SSH_PRIVATE_KEY_FILE') }}"
+        commit_message: "Commit resources for software factory '{{software_factory.name}}' from service request {{ jsm_issue_id }}"
 
   - name: sf - get kubernetes auth token
     community.kubernetes.k8s_auth:

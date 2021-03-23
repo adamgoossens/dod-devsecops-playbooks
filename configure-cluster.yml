@@ -101,7 +101,6 @@
       failed_when:
         - repo.status not in [200, 404]
 
-    - debug: var=repo.json['items']
     - when:
       - repo.json['items'] == None
       name: create repository
