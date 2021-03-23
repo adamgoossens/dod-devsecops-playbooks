@@ -3,9 +3,9 @@ kind: KafkaConnect
 metadata:
   name: kafka-connect
   namespace: {{ namespace }}
-	annotations:
-		argocd.argoproj.io/sync-wave: "40"
-		argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
+  annotations:
+    argocd.argoproj.io/sync-wave: "40"
+    argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
     strimzi.io/use-connector-resources: "true"
 spec:
   image: "quay.io/agoossen/kafka-connect-camel:1.6.2-2"
@@ -18,7 +18,7 @@ spec:
   replicas: 1
   externalConfiguration:
     volumes:
-      - name: aws-credentials
-        secrets:
+      - name: s3-config
+        secret:
           secretName: aws-credentials
 
