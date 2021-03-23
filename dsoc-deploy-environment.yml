@@ -78,7 +78,7 @@
       repo_revision: "{{ scm_branch }}"
       repo_path: "socs/{{ soc_name }}"
       namespace: "{{ soc_name }}"
-
+ 
   - name: soc - template resources for SOC environment
     template:
       src: "{{ item }}"
@@ -90,7 +90,7 @@
       - "templates/soc/*.yaml"
 
   - when:
-    - template_resources.changed
+    - template_resources.changed or application_resource.changed
     block:
 
     - include_tasks: tasks/git-commit-push.yml
