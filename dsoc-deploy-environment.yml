@@ -134,7 +134,6 @@
     delay: 10
     retries: 30
 
-  - name: soc - create aws credential secret
   - name: jsm - comment and close
     include_tasks: tasks/jira-comment.yml
     vars:
