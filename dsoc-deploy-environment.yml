@@ -24,6 +24,10 @@
       host: "{{ lookup('env', 'OPENSHIFT_API_URL') }}"
       validate_certs: "{{ not (lookup('env', 'OPENSHIFT_API_INSECURE_CERTS') | bool) }}"
 
+    community.kubernetes.k8s:
+      host: "{{ lookup('env', 'OPENSHIFT_API_URL') }}"
+      validate_certs: "{{ not (lookup('env', 'OPENSHIFT_API_INSECURE_CERTS') | bool) }}"
+
   vars:
     jira_var_lookups:
       soc_env_name: 'customfield_10056'
