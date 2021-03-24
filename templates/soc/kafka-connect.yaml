@@ -10,6 +10,9 @@ metadata:
 spec:
   image: "quay.io/agoossen/kafka-connect-camel:1.6.2-3"
   bootstrapServers: 'kafka-kafka-bootstrap:9093'
+  config:
+    config.providers: file
+    config.providers.file.class: org.apache.kafka.common.config.provider.FileConfigProvider
   version: 2.6.0
   tls:
     trustedCertificates:
