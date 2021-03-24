@@ -18,7 +18,7 @@ spec:
   replicas: 1
   externalConfiguration:
     volumes:
-      - name: s3-config
+      - name: connector-config
         secret:
           secretName: aws-credentials
 
