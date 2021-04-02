@@ -38,11 +38,11 @@
 
   - name: soc - create soc env name
     set_fact:
-      soc_name: "soc-{{ jira_field_soc_project_name }}-{{ jira_field_soc_env.value | lower | regex_replace('[^a-zA-Z0-9 ]','') | regex_replace(' ','-') }}"
+      soc_name: "soc-{{ jira_field_soc_project_name | lower }}-{{ jira_field_soc_env.value | lower | regex_replace('[^a-zA-Z0-9 ]','') | regex_replace(' ','-') }}"
 
   - name: jsm - add comment to ticket
     when:
-      - 'jira_issue_status.name == "Waiting For Support"'
+      - 'jira_issue_status.name|lower == "waiting for support"'
     include_tasks: tasks/jira-comment.yml
     vars:
       transitions:

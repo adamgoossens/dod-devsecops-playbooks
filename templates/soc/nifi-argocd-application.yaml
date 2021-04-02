@@ -12,7 +12,7 @@ spec:
   source:
     path: '.'
     repoURL: 'https://github.com/cetic/helm-nifi.git'
-    targetRevision: 'refs/tags/0.6.4'
+    targetRevision: '0.6.4'
     helm:
       values: |-
         # Number of nifi nodes
@@ -173,9 +173,7 @@ spec:
         # Nifi registry:
         # ------------------------------------------------------------------------------
         registry:
-          enabled: true
-          url: ""
-          port: 80
+          enabled: false
 
         # Configure metrics
         metrics:
