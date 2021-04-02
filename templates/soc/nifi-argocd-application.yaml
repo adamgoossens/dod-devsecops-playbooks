@@ -41,7 +41,7 @@ spec:
           httpsPort:
           webProxyHost:
           clusterPort: 6007
-          clusterSecure: true
+          clusterSecure: false
           needClientAuth: false
           provenanceStorage: "1 GB"
           siteToSite:
