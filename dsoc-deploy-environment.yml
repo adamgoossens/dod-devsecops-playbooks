@@ -129,6 +129,7 @@
       data: |-
         access_key={{ lookup('ini', 'aws_access_key_id section=default file=' + credfile) }}
         secret_key={{ lookup('ini', 'aws_secret_access_key section=default file=' + credfile) }}
+        region=ap-southeast-2
 
   - when:
     - template_resources.changed or application_resource.changed
@@ -139,11 +140,11 @@
         key_file: "{{ lookup('env', 'SSH_PRIVATE_KEY_FILE') }}"
         commit_message: "Commit resources for SOC environment '{{soc_name}}' from service request {{ jsm_issue_id }}"
 
-  - name: soc - wait for ArgoCD application to sync (10 sec poll, up to 5 minutes)
+  - name: soc - wait for ArgoCD applications to sync (10 sec poll, up to 5 minutes)
     community.kubernetes.k8s_info:
       api_version: argoproj.io/v1alpha1
       kind: Application
-      name: "{{ soc_name }}"
+      name: "{{ item }}"
       namespace: "argocd"
       api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
     register: argocd_app
@@ -151,8 +152,41 @@
       - argocd_app.resources | length > 0
       - argocd_app.resources[0].status is defined
       - "argocd_app.resources[0].status.sync.status == 'Synced'"
+    loop:
+      - "{{ soc_name }}"
+      - "{{ soc_name }}-nifi"
     delay: 10
     retries: 30
+
+  - name: soc - get NiFi route
+    community.kubernetes.k8s_info:
+      api_version: route.openshift.io/v1
+      kind: Route
+      namespace: "{{ soc_name }}"
+      name: "{{ soc_name }}-nifi"
+      api_key: "{{ k8s_auth_results.k8s_auth.api_key }}"
+    register: nifi_route
+    until:
+      - nifi_route.resources|length == 1
+    delay: 10
+    retries: 30
+
+  - set_fact:
+      nifi_api: "{% if spec.port.targetPort == 'http' %}http://{%else%}https://{%endif%}{{ spec.host }}/nifi-api"
+    vars:
+      spec: "{{ nifi_route.resources[0].spec }}"
+
+  - name: soc - wait for NiFi API to respond
+    uri:
+      url: "{{ nifi_api }}/system-diagnostics"
+    register: url_test
+    until:
+      - url_test.status == 200
+
+  - name: soc - get list of NiFi templates
+    uri:
+      url: "{{ nifi_api }}/resources/"
+    register: resources
 
   - name: jsm - comment and close
     include_tasks: tasks/jira-comment.yml
