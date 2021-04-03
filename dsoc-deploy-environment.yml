@@ -182,6 +182,8 @@
     register: url_test
     until:
       - url_test.status == 200
+    delay: 15
+    retries: 30
 
   - name: soc - get list of NiFi templates
     uri:
