@@ -172,31 +172,19 @@
     retries: 30
 
   - set_fact:
-      nifi_api: "{% if spec.port.targetPort == 'http' %}http://{%else%}https://{%endif%}{{ spec.host }}/nifi-api"
+      nifi_api: "{% if spec.port.targetPort == 'http' %}http://{%else%}https://{%endif%}{{ spec.host }}"
     vars:
       spec: "{{ nifi_route.resources[0].spec }}"
 
   - name: soc - wait for NiFi API to respond
     uri:
-      url: "{{ nifi_api }}/system-diagnostics"
+      url: "{{ nifi_api }}/nifi-api/system-diagnostics"
     register: url_test
     until:
       - url_test.status == 200
     delay: 15
     retries: 30
 
-  - name: soc - get list of NiFi templates
-    uri:
-      url: "{{ nifi_api }}/resources/"
-    register: resources
-
-  - name: jsm - comment and close
-    include_tasks: tasks/jira-comment.yml
-    vars:
-      transitions:
-        - { transition: "Resolve this issue", status: "Resolved" }
-        - { transition: "Close", status: "Closed" }
-      comment: |
-        Hello!
-
-        Your new SOC environment has been provisioned successfully.
+  - set_stats:
+      nifi_url: "{{ nifi_api }}"
+      jsm_issue_id: "{{ jsm_issue_id }}"

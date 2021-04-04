@@ -69,3 +69,13 @@
       body:
         id: "{{ process_group_id }}"
         state: "RUNNING"
+
+  - include_tasks: tasks/jira-fetch-issue.yml
+
+  - name: jsm - comment and close
+    include_tasks: tasks/jira-comment.yml
+    vars:
+      transitions:
+        - { transition: "Resolve this issue", status: "Resolved" }
+        - { transition: "Close", status: "Closed" }
+      comment_template: soc/comments/soc-deploy-complete.j2
