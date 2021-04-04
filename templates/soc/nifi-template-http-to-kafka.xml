@@ -281,7 +281,7 @@
                     </entry>
                     <entry>
                         <key>topic</key>
-                        <value>processed-eraw</value>
+                        <value>{{ kafka_topic }}</value>
                     </entry>
                     <entry>
                         <key>acks</key>

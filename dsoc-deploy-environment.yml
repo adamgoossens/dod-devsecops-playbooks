@@ -41,6 +41,11 @@
       project_environment: "{{ jira_field_soc_env.value | lower | regex_replace('[^a-zA-Z0-9 ]', '') | regex_replace(' ', '-') }}"
       application: "testapplication"
 
+  - set_fact:
+      kafka_topic: "{{ project_name }}-{{ project_environment }}-{{ application }}"
+      s3_bucket:   "{{ project_name }}-{{ project_environment }}-{{ application }}"
+      s3_object_key: "{{ project_name }}-{{ project_environment }}-{{ application }}"
+
   - name: soc - create soc env name
     set_fact:
       soc_name: "soc-{{ project_name }}"
