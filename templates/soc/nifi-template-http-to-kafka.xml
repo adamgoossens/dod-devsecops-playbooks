@@ -471,10 +471,6 @@
                         <key>SSL Context Service</key>
                     </entry>
                     <entry>
-                        <key>client-authentication</key>
-                        <value>AUTO</value>
-                    </entry>
-                    <entry>
                         <key>Authorized DN Pattern</key>
                         <value>.*</value>
                     </entry>
