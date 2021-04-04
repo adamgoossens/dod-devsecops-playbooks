@@ -215,14 +215,16 @@
   - when:
       - not template_id
     block:
+    - ansible.builtin.tempfile:
+        state: file
+      register: nifi_tempfile
+
+    - template:
+        src: soc/nifi-template-http-to-kafka.xml
+        dest: "{{ nifi_tempfile.path }}"
+
     - name: nifi - upload template if it doesn't exist
-      uri:
-        url: "{{ nifi_api }}/process-groups/{{ process_group_id }}/templates/upload"
-        method: 'POST'
-        body_format: 'form-multipart'
-        body: 
-          template: "{{ lookup('file', 'templates/soc/nifi-template-http-to-kafka.xml') }}"
-        status_code: 201
+      shell: "curl -XPOST -F 'template=@{{nifi_tempfile.path}}' {{ nifi_api }}/process-groups/{{ process_group_id }}/templates/upload"
 
     - name: nifi - fetch template id
       uri:
