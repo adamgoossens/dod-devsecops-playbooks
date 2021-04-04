@@ -48,7 +48,7 @@
 
   - name: soc - create soc env name
     set_fact:
-      soc_name: "soc-{{ project_name }}"
+      soc_name: "soc-{{ project_name }}-{{ project_environment}}"
 
   - name: jsm - add comment to ticket
     when:
