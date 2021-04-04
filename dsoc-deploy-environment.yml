@@ -194,13 +194,12 @@
     retries: 30
 
   - uri:
-      url: "{{ nifi_api }}/resources/"
+      url: "{{ nifi_api }}/flow/process-groups/root"
     register: resources
 
   - set_fact:
-      process_group_id: "{{ (resources.json | to_json | from_json | json_query(query)).split('/')[-1] }}"
-    vars:
-      query: "resources[?contains(identifier, 'process-groups') && name=='NiFi Flow'].identifier | [0]"
+      process_group_id: "{{ resources.json.processGroupFlow.id }}"
+      nifi_template_name: "{{ project_name }}-{{ project_environment }}-{{ application }}-http-to-kafka"
 
   - name: nifi - fetch template id
     uri:
@@ -210,7 +209,7 @@
   - set_fact:
       template_id: "{{ id }}"
     vars:
-      query: "templates[?template.name=='http-to-kafka'].id|[0]"
+      query: "templates[?template.name=='{{ nifi_template_name }}'].id|[0]"
       id: "{{ nifi_templates.json | to_json | from_json | json_query(query) }}"
 
   - when:
@@ -222,7 +221,7 @@
         method: 'POST'
         body_format: 'form-multipart'
         body: 
-          template: "{{ lookup('file', 'files/soc/nifi-template-http-to-kafka.xml') }}"
+          template: "{{ lookup('file', 'templates/soc/nifi-template-http-to-kafka.xml') }}"
         status_code: 201
 
     - name: nifi - fetch template id
@@ -233,7 +232,7 @@
     - set_fact:
         new_template_id: "{{ id }}"
       vars:
-        query: "templates[?template.name=='http-to-kafka'].id|[0]"
+        query: "templates[?template.name=='{{ nifi_template_name }}'].id|[0]"
         id: "{{ nifi_templates.json | to_json | from_json | json_query(query) }}"
 
     - name: nifi - instantiate the template
