@@ -21,4 +21,4 @@
   community.general.jira:
     operation: comment
     issue: "{{ jsm_issue_id }}"
-    comment: "{{ comment }}"
+    comment: "{% if comment_template %}{{ lookup('template', comment_template) }}{%else%}{{ comment }}{%endif%}"
