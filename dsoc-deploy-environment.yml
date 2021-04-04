@@ -36,9 +36,14 @@
   tasks:
   - include_tasks: tasks/jira-fetch-issue.yml
 
+  - set_fact:
+      project_name: "{{ jira_field_soc_project_name | lower | regex_replace('[^a-zA-Z0-9 ]', '') | regex_replace(' ', '-') }}"
+      project_environment: "{{ jira_field_soc_env.value | lower | regex_replace('[^a-zA-Z0-9 ]', '') | regex_replace(' ', '-') }}"
+      application: "testapplication"
+
   - name: soc - create soc env name
     set_fact:
-      soc_name: "soc-{{ jira_field_soc_project_name | lower }}-{{ jira_field_soc_env.value | lower | regex_replace('[^a-zA-Z0-9 ]','') | regex_replace(' ','-') }}"
+      soc_name: "soc-{{ project_name }}"
 
   - name: jsm - add comment to ticket
     when:

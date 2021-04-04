@@ -4,7 +4,7 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
     argocd.argoproj.io/sync-wave: '50'
-  name: s3-sink-connector
+  name: {{ project_name }}-{{ project_environment }}-s3-sink
   namespace: "{{ namespace }}"
   labels:
     strimzi.io/cluster: kafka-connect
@@ -14,10 +14,10 @@ spec:
     camel.component.aws2-s3.accessKey: ${file:/opt/kafka/external-configuration/connector-config/credentials:access_key}
     camel.component.aws2-s3.secretKey: ${file:/opt/kafka/external-configuration/connector-config/credentials:secret_key}
     camel.component.aws2-s3.region: ${file:/opt/kafka/external-configuration/connector-config/credentials:region}
-    camel.sink.endpoint.keyName: ${date:now:yyyyMMdd-HHmmssSSS}-${exchangeId}
+    camel.sink.endpoint.keyName: ${date:now:yyyyMMdd-HHmmss}
     camel.sink.endpoint.autoCreateBucket: true
-    camel.sink.path.bucketNameOrArn: {{ namespace }}-processed
+    camel.sink.path.bucketNameOrArn: {{ project_name }}-{{ project_environment }}-{{ application }}
     key.converter: org.apache.kafka.connect.storage.StringConverter
-    topics: processed-eraw
+    topics: {{ project_name }}-{{ project_environment }}-{{ application }}
     value.converter: org.apache.kafka.connect.storage.StringConverter
   tasksMax: 1
