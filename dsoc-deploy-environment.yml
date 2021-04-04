@@ -172,19 +172,94 @@
     retries: 30
 
   - set_fact:
-      nifi_api: "{% if spec.port.targetPort == 'http' %}http://{%else%}https://{%endif%}{{ spec.host }}"
+      nifi_url: "{% if spec.port.targetPort == 'http' %}http://{%else%}https://{%endif%}{{ spec.host }}"
     vars:
       spec: "{{ nifi_route.resources[0].spec }}"
 
+  - set_fact:
+      nifi_api: "{{ nifi_url }}/nifi-api"
+
   - name: soc - wait for NiFi API to respond
     uri:
-      url: "{{ nifi_api }}/nifi-api/system-diagnostics"
+      url: "{{ nifi_api }}/system-diagnostics"
     register: url_test
     until:
       - url_test.status == 200
     delay: 15
     retries: 30
 
-  - set_stats:
-      nifi_url: "{{ nifi_api }}"
-      jsm_issue_id: "{{ jsm_issue_id }}"
+  - uri:
+      url: "{{ nifi_api }}/resources/"
+    register: resources
+
+  - set_fact:
+      process_group_id: "{{ (resources.json | json_query(query)).split('/')[-1] }}"
+    vars:
+      query: "resources[?contains(identifier, 'process-groups') && name=='NiFi Flow'].identifier | [0]"
+
+  - name: nifi - fetch template id
+    uri:
+      url: "{{ nifi_api }}/flow/templates/"
+    register: nifi_templates
+
+  - set_fact:
+      template_id: "{{ id }}"
+    vars:
+      query: "templates[?template.name=='http-to-kafka'].id|[0]"
+      id: "{{ nifi_templates.json | json_query(query) }}"
+
+  - when:
+      - not template_id
+    block:
+    - name: nifi - upload template if it doesn't exist
+      uri:
+        url: "{{ nifi_api }}/process-groups/{{ process_group_id }}/templates/upload"
+        method: 'POST'
+        body_format: 'form-multipart'
+        body: 
+          template: "{{ lookup('file', 'files/soc/nifi-template-http-to-kafka.xml') }}"
+        status_code: 201
+
+    - name: nifi - fetch template id
+      uri:
+        url: "{{ nifi_api }}/flow/templates/"
+      register: nifi_templates
+
+    - set_fact:
+        new_template_id: "{{ id }}"
+      vars:
+        query: "templates[?template.name=='http-to-kafka'].id|[0]"
+        id: "{{ nifi_templates.json | json_query(query) }}"
+
+    - name: nifi - instantiate the template
+      uri:
+        url: "{{ nifi_api }}/process-groups/{{ process_group_id }}/template-instance"
+        method: "POST"
+        body_format: json
+        body:
+          originX: 10
+          originY: 10
+          templateId: "{{ new_template_id }}"
+        status_code: [200, 201]
+
+    - set_fact:
+        template_id: "{{ new_template_id }}"
+
+  - name: nifi - start process group
+    uri:
+      url: "{{ nifi_api }}/flow/process-groups/{{process_group_id}}"
+      method: PUT
+      body_format: json
+      body:
+        id: "{{ process_group_id }}"
+        state: "RUNNING"
+
+  - include_tasks: tasks/jira-fetch-issue.yml
+
+  - name: jsm - comment and close
+    include_tasks: tasks/jira-comment.yml
+    vars:
+      transitions:
+        - { transition: "Resolve this issue", status: "Resolved" }
+        - { transition: "Close", status: "Closed" }
+      comment_template: soc/comments/soc-deploy-complete.j2
