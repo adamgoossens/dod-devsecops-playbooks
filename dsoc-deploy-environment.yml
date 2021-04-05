@@ -168,6 +168,17 @@
     delay: 10
     retries: 30
 
+  - name: soc - get external address of LoadBalancer service
+    community.kubernetes.k8s_info:
+      api_version: v1
+      kind: Service
+      name: "{{ soc_name }}-nifi"
+      namespace: "{{ soc_name }}"
+    register: nifi_svc
+
+  - set_fact:
+      nifi_ingest_url: "http://{{ nifi_svc.resources[0].status.loadBalancer.ingress[0].hostname }}:2055/contentListener"
+
   - name: soc - get NiFi route
     community.kubernetes.k8s_info:
       api_version: route.openshift.io/v1
