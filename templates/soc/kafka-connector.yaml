@@ -24,7 +24,7 @@ spec:
     # basic string aggregation - concatenates incoming messages together.
     # maximum of 750 rows in a single S3 object
     # flush it out after 5 seconds of no incoming data
-    camel.beans.aggregate: class:org.apache.camel.kafkaconnector.aggregator.StringAggregator
+    camel.beans.aggregate: "#class:org.apache.camel.kafkaconnector.aggregator.StringAggregator"
     camel.aggregation.size: 750
     camel.aggregation.interval: 5000
 
