@@ -184,6 +184,10 @@
     delay: 15
     retries: 30
 
+  - name: nifi - wait 60 seconds for cluster establishment
+    pause:
+      seconds: 60
+
   - uri:
       url: "{{ nifi_api }}/flow/process-groups/root"
     register: resources
