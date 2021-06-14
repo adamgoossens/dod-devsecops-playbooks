@@ -7,6 +7,26 @@ metadata:
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
 spec:
   tsscPlatform:
-    providers:
-      ciTool: jenkins
-      containerRegistry: nexus
+    helmRepository: 'https://ploigos.github.io/ploigos-charts'
+    services:
+      artifactRepository:
+        managed: true
+        name: nexus
+      containerRegistry:
+        managed: true
+        name: nexus
+      continuousDeployment:
+        managed: true
+        name: argocd
+      continuousIntegration:
+        managed: true
+        name: jenkins
+      sourceControl:
+        managed: true
+        name: gitea
+      staticCodeAnalysis:
+        managed: true
+        name: sonarqube
+      uat:
+        managed: true
+        name: selenium
