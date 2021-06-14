@@ -11,4 +11,3 @@ spec:
   name: ploigos-software-factory-operator
   source: redhatgov-operators
   sourceNamespace: openshift-marketplace
-  startingCSV: ploigos-software-factory-operator.v0.2.5
