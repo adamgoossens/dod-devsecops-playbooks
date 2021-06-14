@@ -9,6 +9,9 @@ spec:
   tsscPlatform:
     helmRepository: 'https://ploigos.github.io/ploigos-charts'
     services:
+      ide:
+        managed: true
+        name: codeready
       artifactRepository:
         managed: true
         name: nexus
